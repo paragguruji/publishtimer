@@ -22,6 +22,7 @@ RETRY_LIMIT = 3
 
 def get_credentials(authUid):
     """Returns access_token and access_token_secret for given authUid in JSON format by invoking Crowdfire's internal access_details API
+        Raises ValueError if credentials for given authUid not available with Crowdfire
     """
     if not isinstance(authUid, str):
         authUid = str(authUid)
@@ -32,8 +33,12 @@ def get_credentials(authUid):
                                'service': os.environ.get('SERVICE', ''), 
                                'authUid': authUid})
     json_response = response.json()
-    d = {'oauth_token': helpers.decrypt(json_response['access_token']),
-         'oauth_token_secret': helpers.decrypt(json_response['access_secret']),
+    if json_response.get('code', 0) == 604:
+        raise ValueError("No credentials retrieved for authUid " + \
+                            str(authUid) + \
+                            " from Crowdfire's internal access_details API")
+    d = {'oauth_token': helpers.decrypt(json_response.get('access_token', None)),
+         'oauth_token_secret': helpers.decrypt(json_response.get('access_secret', None)),
          'app_key': os.environ.get('TWITTER_APP_KEY', ''),
          'app_secret': os.environ.get('TWITTER_APP_SECRET', '')}
     return d
@@ -41,6 +46,7 @@ def get_credentials(authUid):
     
 def make_twython(authUid):
     """Makes a twython object with given authUid as authenticating user
+        Raises ValueError if credentials for given authUid not available with Crowdfire
     """
     return Twython(**get_credentials(authUid))
 
@@ -111,7 +117,9 @@ class TwitterUser:
             :param max_id: [long] Twitter API max_id option. has priority over since_id
                 :default: None
         """
-        twitter_handle  = kwargs.get('twitter_handle', make_twython(authUid))
+        twitter_handle  = kwargs.get('twitter_handle', None)
+        if not twitter_handle:
+            twitter_handle = make_twython(authUid)
         user_id         = kwargs.get('user_id', authUid)
         count           = kwargs.get('count', 200)
         trim_user       = kwargs.get('trim_user', True)
@@ -227,7 +235,12 @@ class TwitterUser:
 
     def request_timeline(self, authUid, save_to_es=True, **kwargs):
         '''Requests timeline of this user with options given in **kwargs
+            :param authUid: authUid of user whose timeline is to be fetched
+            :param save_to_es: Flag when set true, data fetched is saved in elasticsearch for future usage
+                :default: True
             :param **kwargs: Same as *def fetch_timeline(self, authUid, **kwargs)*
+            
+            Raises ValueError if credentials for given authUid not available with Crowdfire
         '''
         kwargs['twitter_handle'] = \
             kwargs.get('twitter_handle', make_twython(authUid))
@@ -243,9 +256,9 @@ class TwitterUser:
                                          save_to_es, \
                                          **kwargs)
             if max_id == kwargs.get('max_id', 1):
-                return max_id
+                return timeline
             elif max_id == -1:
-                return kwargs['max_id']
+                return timeline
             else:
                 kwargs['max_id'] = max_id
                 if count > 200:                

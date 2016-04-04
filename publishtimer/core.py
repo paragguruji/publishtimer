@@ -18,8 +18,7 @@ from publishtimer import elasticsearch_util as es
 
 
 DAY_MAP = {0:'mon', 1:'tue', 2:'wed', 3:'thu', 4:'fri', 5:'sat', 6:'sun'}
-queue = boto.connect_sqs().get_queue(os.environ['CALCULATION_QUEUE_NAME'])
-default_schedule = [    '18:00', '10:45', '17:15', '11:40', '22:10', 
+DEFAULT_SCHEDULE = [    '18:00', '10:45', '17:15', '11:40', '22:10', 
                         '09:50', '20:20', '08:55', '21:15', '19:25',
                         '12:00', '23:05', '07:05', '16:10', '13:35', 
                         '06:50', '14:55', '05:20', '15:30', '00:30',
@@ -33,6 +32,7 @@ default_schedule = [    '18:00', '10:45', '17:15', '11:40', '22:10',
     
 def get_data_on_fly(authUid, save=True, **kwargs):
     """Get twitter timeline for given user on fly (w/o ES)
+        Raises ValueError if credentials for given authUid not available with Crowdfire
     """
     ret = {'twitter_id': authUid, 'data': []}
     tw = td.TwitterUser()
@@ -121,24 +121,44 @@ def prepare_data(authUid,
 def compute_times(data_dict):
     """Compute the list of best times from given data
     """
-    out_dict = {'authUid': data_dict['twitter_id'], 
+    out_dict = {'authUid': unicode(data_dict['twitter_id']) + u'-tw', 
                 'completeSchedule': [],
                 'source': 'internal'}
     df = data_dict['data_frame']
     if df.empty:
+        """If no data is available to compute any schedule
+        """
         return out_dict
+    
+    """Normalize each engagement score value X as: X = X/(Xmax - Xmin)        
+    """
     cols_to_norm = ['engagement']
     df[cols_to_norm] = df[cols_to_norm].apply(lambda x: x/(x.max() - x.min()))
+    
+    """Slice the dataframe into 7 dataframes, 1 for each day of week
+    """
     df_daywise = [df[(df.day==i)][[ 'day', \
                                     'hour', \
                                     'minute', \
                                     'engagement' ]] for i in range(7)]
     for df_i in df_daywise:
         response_dict = {}
+
+        """Assign rank to each tweet-object, relative to its day, based on its normalized engagement score
+        """        
         df_i['rank'] = df_i.engagement.rank(method='first', ascending=False)
+
+        """Slice out top 50 ranked times
+        """
         d = df_i.sort_values(by='rank').loc[df_i['rank'].isin(range(1, 51))]
+        
+        """Take the Transpose of the matrix
+        """        
         dt = d.T
+        
         if not dt.empty:
+            """Append daily schedule to response
+            """
             response_dict["day"] = DAY_MAP[dt[d.index[0]].day.astype(int)]
             response_dict["times"] = ['{}:{}'.format(dt[i].hour.astype(int), \
                                                     dt[i].minute.astype(int)) \
@@ -147,24 +167,43 @@ def compute_times(data_dict):
     return out_dict
     
 
-def write_schedule(schedule):
-    #schedule[''] = 
+def fill_incomplete_schedule(incomplete_schedule):
+    """Fills in given incomplete schedule with values from default schedule
+    """
+    schedule = incomplete_schedule
     for day in DAY_MAP.values():
+        """Create entries for missing days from default schedule
+        """
         if day not in [item['day'] for item in schedule['completeSchedule']]:
             schedule['completeSchedule'].append({   'day': day, 
-                                                    'times': default_schedule})
+                                                    'times': DEFAULT_SCHEDULE})
     for item in schedule['completeSchedule']:
+        """Create entries for missing times in existing day-entries from default schedule
+        """
         available_len = len(item['times'])
         if available_len < 50:
-            item['times']+=[t for t in default_schedule 
+            item['times']+=[t for t in DEFAULT_SCHEDULE 
                                 if t not in item['times']][:50-available_len]
-    
+    return schedule
+
+
+def write_schedule(schedule):
+    """Gets given schedule completed if not complete and calls SAVE_SCHEDULE API to write it.
+    """
+    complete_schedule = fill_incomplete_schedule(schedule)
     response = requests.put(url=os.environ.get('SAVE_SCHEDULE_URL', ''), 
-                              data=schedule)
-    return response
+                              data=complete_schedule)
+    response = response.json()
+    response['url_requested'] = os.environ.get('SAVE_SCHEDULE_URL', '')
+    final_response = {"response_from_save_schedule_api": response,
+                      "schedule_prepared": complete_schedule}
+    return final_response
 
 
 def work_once_with_sqs():
+    """Compute & write schedule for one authUid picked from SQS queue
+    """
+    queue = boto.connect_sqs().get_queue(os.environ['CALCULATION_QUEUE_NAME'])
     results = queue.get_messages()        
     for msg in results:
         write_schedule(
@@ -175,14 +214,18 @@ def work_once_with_sqs():
 
 
 def work_once(**params):
+    """Compute & write schedule for one authUid supplied in params
+    """
     data = prepare_data(**params)
     schedule = compute_times(data)
     return write_schedule(schedule)
 
 
 def work(interval=30):
+    """Contineously comsume SQS queue and work on each authUid from it with interval of 30 seconds
+    """
     while True:    
-        work_once()
+        work_once_with_sqs()
         time.sleep(interval)
 
 
