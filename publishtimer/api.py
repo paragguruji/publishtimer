@@ -10,7 +10,7 @@ from publishtimer.core import work_once as worker_function
 
 app = Flask(__name__)
 
-@app.route('/ping')
+@app.route('/ping', methods=['GET'])
 def index():
     """Index function to check if app is alive
     """
@@ -45,8 +45,6 @@ def publish_schedule():
                       'use_tw': <(True/False)>, 
                       'save_on_fly': <(True/False)>}
     """
-    print request
-    print "req json", request.json
     if not request.json:
         print "aborting because empty paramas"
         abort(400)
@@ -66,7 +64,6 @@ def publish_schedule():
             type(request.json['save_on_fly']) is not bool:
         print "aborting because save_on_fly is not bool"        
         abort(400)
-    #print "Request OK, Working..."
     results = worker_function(**request.json)
     return make_response(jsonify(results))
 

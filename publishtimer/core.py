@@ -191,10 +191,12 @@ def write_schedule(schedule):
     """Gets given schedule completed if not complete and calls SAVE_SCHEDULE API to write it.
     """
     complete_schedule = fill_incomplete_schedule(schedule)
-    response = requests.put(url=os.environ.get('SAVE_SCHEDULE_URL', ''), 
-                              data=complete_schedule)
+    request_url = os.environ.get('SAVE_SCHEDULE_URL', '') + \
+                    complete_schedule['authUid']
+    response = requests.put(url= request_url, 
+                              json=complete_schedule)
     response = response.json()
-    response['url_requested'] = os.environ.get('SAVE_SCHEDULE_URL', '')
+    response['url_requested'] = request_url
     final_response = {"response_from_save_schedule_api": response,
                       "schedule_prepared": complete_schedule}
     return final_response

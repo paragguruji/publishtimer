@@ -11,6 +11,7 @@ import requests
 import unittest
 import os
 import json
+import time
 
 
 class ApiUnitTests(unittest.TestCase):
@@ -25,7 +26,8 @@ class ApiUnitTests(unittest.TestCase):
 
     def validate_response(self, response):
         """validate response by checking all possibilities"""
-        if isinstance(response, requests.models.Response):
+        if isinstance(response, requests.models.Response) and \
+                                response.status_code==200:
             return True
         return False
 
@@ -36,24 +38,30 @@ class ApiUnitTests(unittest.TestCase):
         """
         server = Process(target=self.run_app)
         server.start()
+        time.sleep(5)
+        #print os.environ['SERVER_NAME']
         request_url = 'http://'+ os.environ['SERVER_NAME'] + '/ping'
-        response = requests.get(url=request_url)
+        response = requests.get(url="http://localhost:5001/ping")
         self.assertEqual("pong", response.text, 
                          msg="Ping failed for URL:"+str(request_url))
         server.terminate()
         server.join()
         
         
-    def test_publishschedule(self):
+    def test_publish_schedule(self):
         """Tests if publishschedule request works
             URL: 'http://' + os.environ['SERVER_NAME'] + '/api/v1.0/publishschedule'
         """
         server = Process(target=self.run_app)
         server.start()
+        time.sleep(5)
         request_url =   'http://' + os.environ['SERVER_NAME'] + \
                         '/api/v1.0/publishschedule'
-        response = requests.put(url=request_url, data={'authUid': u'19900726-tw'})
-        self.assertTrue(self.validate_response(response))
+        response = requests.put(url=request_url, json={'authUid': u'19900726-tw'})
+        self.assertTrue(self.validate_response(response), 
+                        msg="publish_schedule response Not OK:\nStatus Code: " + \
+                            str(response.status_code) + \
+                            "\nJSON: " + json.dumps(response.json()))
         server.terminate()
         server.join()
         
