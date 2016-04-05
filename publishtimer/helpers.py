@@ -74,3 +74,6 @@ def purge_key_deep(a_dict, key):
             a_dict[k] = purge_key_deep(a_dict[k], key)
     return a_dict
         
+
+if __name__=="__main__":
+    setup_env()
