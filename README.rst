@@ -3,7 +3,18 @@ publishtimer Repository
 
 This project is a service for computing publish-time-recommendations
 
+
+Steps to run the project:
+=========================
+1. Set working directory to base directory of the repository
+2. Set all the environment variables specified below
+3. To start the flast app, run: 
+        python publishtimer/api.py
+4. Refer docs for API methods and request params 
+
+
 Environment variables required:
+===============================
 
 ACCESS_DETAILS_URL: Crowdfire API's URL for getting access token
 

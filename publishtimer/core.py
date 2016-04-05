@@ -51,6 +51,19 @@ def get_data_on_fly(authUid, save=True, **kwargs):
 
 def get_data_from_es(authUid):
     """Get twitter timeline for given user from ES
+    
+        1. Run elasticsearch query to fetch tweets of given authUid with size 1:
+        2. Get the count from its result to COUNT
+        3. Run same query with size = COUNT
+        4. Return data from hits field of the resultset with sanity_check
+
+        Query: { "filter" : { "term" : { "user.id" : <authUid> } },
+                        	"fields" : [ 'id', 
+                                         'created_at', 
+                                         'retweet_count', 
+                                         'favorite_count'],
+                        	"size" : <SIZE> }
+
     """
     search_body =   { 
                         "filter" :
@@ -95,6 +108,18 @@ def prepare_data(authUid,
                  save_on_fly=True, 
                  **kwargs):
     """Retreive twitter data from ES or Twitter-API and transform to a form consumable by *compute_times*
+
+        1. Check and correct if required the format of given authUid
+        2. data_dict = empty response
+        3. If use_es True:
+            3.1. data_dict = get_data_from_es(authUid)
+        4. If data_dict empty and use_tw True:
+            4.1. data_dict = get_data_on_fly(authUid, save=save_on_fly, **kwargs)
+        5. If data_dict not empty:
+            5.1. For each data_point:
+                5.1.1. Parse created_at field from data_dict into day, hour and minute and add to data_point entry in the data_dict
+        6. Create pandas dataframe from data_dict and return in response
+    
     """
     if isinstance(authUid, str):
         authUid = authUid.decode('utf-8')
@@ -120,6 +145,17 @@ def prepare_data(authUid,
 
 def compute_times(data_dict):
     """Compute the list of best times from given data
+    
+            1. If no data is available to compute any schedule give empty response
+            2. Normalize each engagement score value X as: X = X/(Xmax - Xmin)
+            3. Slice the data_frame into 7 dataframes, 1 for each day of week
+            4. For each day-wise-slice:
+                4.1 Assign rank to each tweet-object, relative to its day, based on its normalized engagement score
+                4.2 Slice out top 50 ranked times into a matrix
+                4.3 Take the Transpose of the matrix to get the schedule data for this day
+                4.4 Append daily schedule to response
+            5. Return Response
+
     """
     out_dict = {'authUid': unicode(data_dict['twitter_id']) + u'-tw', 
                 'completeSchedule': [],
@@ -169,6 +205,12 @@ def compute_times(data_dict):
 
 def fill_incomplete_schedule(incomplete_schedule):
     """Fills in given incomplete schedule with values from default schedule
+
+        1. For each day of week:
+            1.1 Create entries for missing days using default schedule
+        2. For each day in schedule:
+            2.1 Create entries for missing times in existing day-entries using default schedule
+        
     """
     schedule = incomplete_schedule
     for day in DAY_MAP.values():
@@ -189,6 +231,12 @@ def fill_incomplete_schedule(incomplete_schedule):
 
 def write_schedule(schedule):
     """Gets given schedule completed if not complete and calls SAVE_SCHEDULE API to write it.
+    
+        1. Fill in given schedule to complete it - fill_incomplete_schedule(schedule)
+        2. Create target URL using environment variable SAVE_SCHEDULE_URL and authUid
+        3. Call save_schedule_api with PUT method
+        4. respond with union of completed_schedule and response from save_schedule_api
+
     """
     complete_schedule = fill_incomplete_schedule(schedule)
     request_url = os.environ.get('SAVE_SCHEDULE_URL', '') + \
@@ -204,6 +252,7 @@ def write_schedule(schedule):
 
 def work_once_with_sqs():
     """Compute & write schedule for one authUid picked from SQS queue
+
     """
     queue = boto.connect_sqs().get_queue(os.environ['CALCULATION_QUEUE_NAME'])
     results = queue.get_messages()        
@@ -217,6 +266,12 @@ def work_once_with_sqs():
 
 def work_once(**params):
     """Compute & write schedule for one authUid supplied in params
+        
+        1. Prepare_data
+        2. Compute_schedule 
+        3. Write_schedule
+        4. Return response of write_schedule
+
     """
     data = prepare_data(**params)
     schedule = compute_times(data)

@@ -7,6 +7,7 @@ Created on Mon Mar 30 12:10:03 2016
 
 from flask import Flask, abort, request, jsonify, make_response
 from publishtimer.core import work_once as worker_function
+import os
 
 app = Flask(__name__)
 
@@ -21,7 +22,14 @@ def index():
 def publish_schedule():
     """API to trigger the publishtimer for desired authUid
     
-    :Returns: Response recieved from save_schedule API
+    Calls the worker_function imported from core module with received params as args and returns its response
+    
+    :Returns: JSON Response containing: 
+            1. JSONified response recieved from save_schedule API
+            2. schedule computed by publishtimer
+            
+    :Response format: {'response_from_save_schedule_api': <jsonifird response>,
+                       'schedule_prepared': <computed_schedule>}
     
     :Request_URL: <base_url>/api/v1.0/publishschedule
     
@@ -70,17 +78,25 @@ def publish_schedule():
 
 @app.errorhandler(404)
 def not_found(error):
+    """Handle 404 error to JSONify the response
+    """
     return make_response(jsonify({'error': 'Not found'}), 404)
 
 
 @app.errorhandler(400)
-def bad_request(error):
+def bad_request(error):    
+    """Handle 400 error to JSONify the response
+    """
     return make_response(jsonify({'error': 'Bad Request. Refer doc', 'message': str(error)}), 400)
 
 
 @app.errorhandler(500)
-def internal_error(error):
+def internal_error(error):    
+    """Handle 500 error to JSONify the response
+    """
     return make_response(jsonify({'error': 'Internal Server Error'}), 500)
 
 if __name__=="__main__":
-    app.run(debug=True)
+    host = os.environ['SERVER_NAME'].split(':')[0];
+    port = int(os.environ['SERVER_NAME'].split(':')[1])
+    app.run(host=host, port=port)

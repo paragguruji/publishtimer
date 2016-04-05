@@ -18,14 +18,16 @@ class ApiUnitTests(unittest.TestCase):
     """Test cases for module publishtimer.api"""
         
     def run_app(self):   
-        """runs the app on self.base_url"""
+        """runs the app on server specified by environment variable *SERVER_NAME*
+        """
         host = os.environ['SERVER_NAME'].split(':')[0]
         port = int(os.environ['SERVER_NAME'].split(':')[1])
         api.app.run(host=host, port=port)
 
 
     def validate_response(self, response):
-        """validate response by checking all possibilities"""
+        """:Returns: **True** if response OK, **False** otherwise
+        """
         if isinstance(response, requests.models.Response) and \
                                 response.status_code==200:
             return True
@@ -34,14 +36,14 @@ class ApiUnitTests(unittest.TestCase):
 
     def test_ping(self):
         """Tests ping function of api
-            URL: 'http://'+os.environ['SERVER_NAME']+'/ping'
+            URL: 'http://<SERVER_NAME>/ping'
+            
         """
         server = Process(target=self.run_app)
         server.start()
         time.sleep(5)
-        #print os.environ['SERVER_NAME']
         request_url = 'http://'+ os.environ['SERVER_NAME'] + '/ping'
-        response = requests.get(url="http://localhost:5001/ping")
+        response = requests.get(url=request_url)
         self.assertEqual("pong", response.text, 
                          msg="Ping failed for URL:"+str(request_url))
         server.terminate()
@@ -49,8 +51,11 @@ class ApiUnitTests(unittest.TestCase):
         
         
     def test_publish_schedule(self):
-        """Tests if publishschedule request works
-            URL: 'http://' + os.environ['SERVER_NAME'] + '/api/v1.0/publishschedule'
+        """Tests if publishschedule request works (side-effect testing for ES excluded)
+        
+            :URL: 'http://<SERVER_NAME>/api/v1.0/publishschedule'
+            :Data: {'authUid': u'19900726-tw'}
+            
         """
         server = Process(target=self.run_app)
         server.start()
@@ -70,7 +75,11 @@ class CoreUnitTests(unittest.TestCase):
     """Test cases for module publishtimer.core"""
         
     def test_get_data_on_fly(self):
-        """testing get_data_on_fly
+        """tests function get_data_on_fly
+        
+            :Signature: get_data_on_fly(authUid, save=True, **kwargs)     
+            :Data: authUid = u'19900726', save = False, kwargs={'count' = 220}
+            
         """
         authUid = u'19900726' 
         save = False
@@ -86,7 +95,11 @@ class CoreUnitTests(unittest.TestCase):
     
     
     def test_get_data_from_es(self):
-        """testing get_data_from_es
+        """tests function get_data_from_es
+        
+            :Signature: get_data_from_es(authUid)
+            :Data: authUid = u'19900726'
+            
         """
         authUid = u'19900726' 
         result = core.get_data_from_es(authUid)
@@ -100,7 +113,11 @@ class CoreUnitTests(unittest.TestCase):
     
     
     def test_prepare_data(self):
-        """testing prepare_data
+        """tests function prepare_data
+        
+            :Signature: prepare_data(authUid, use_es=True, use_tw=True, save_on_fly=True, **kwargs)
+            :Data: authUid = u'19900726', use_es = True, use_tw = False
+            
         """
         authUid = u'19900726' 
         use_es = True 
@@ -122,7 +139,11 @@ class CoreUnitTests(unittest.TestCase):
         
         
     def test_compute_times_with_no_data(self):
-        """testing compute_times_with_no_data
+        """tests function compute_times with no data
+        
+            :Signature: compute_times(data_dict)
+            :Data: data_dict = {'twitter_id': u'19900726', 'data_frame': core.pd.DataFrame()}
+            
         """
         data_dict = {'twitter_id': u'19900726', 
                      'data_frame': core.pd.DataFrame()}        
@@ -133,7 +154,14 @@ class CoreUnitTests(unittest.TestCase):
                                       
                                       
     def test_compute_times_with_data(self):
-        """testing compute_times_with_data
+        """testing compute_times with data
+        
+            :Signature: compute_times(data_dict)
+            :Data: data_dict = {'twitter_id': '19900726', 
+                                'data_frame': <pandas.Dataframe initiated with JSON loaded from test_data_file>}            
+            :test_data_file = test/data/test_data_timeline_authUid19900726.list
+            :test_result_file = test/data/test_compute_times_result_authUid19900726.dict
+            
         """
         test_data_file = "test/data/test_data_timeline_authUid19900726.list"
         test_result_file = \
@@ -147,7 +175,13 @@ class CoreUnitTests(unittest.TestCase):
         
         
     def test_fill_incomplete_schedule(self):
-        """testing fill_incomplete_schedule
+        """tests function fill_incomplete_schedule
+        
+            :Signature: fill_incomplete_schedule(incomplete_schedule)
+            :Data: incomplete_schedule: <JSON loaded from incomplete_schedule_file>
+            :sample incomplete schedule file = test/data/test_incomplete_schedule.dict
+            :sample completed schedule file = test/data/test_completed_schedule.dict
+            
         """
         incomplete_schedule_file = "test/data/test_incomplete_schedule.dict"
         completed_schedule_file = "test/data/test_completed_schedule.dict"
@@ -159,7 +193,12 @@ class CoreUnitTests(unittest.TestCase):
     
     
     def test_write_schedule(self):
-        """testing write_schedule
+        """tests function write_schedule
+        
+            :Signature: write_schedule(schedule)
+            :Data: schedule: <JSON loaded from schedule file>
+            :schedule_file = test/data/test_completed_schedule.dict
+            
         """
         schedule_file = "test/data/test_completed_schedule.dict"
         schedule = json.load(open(schedule_file))

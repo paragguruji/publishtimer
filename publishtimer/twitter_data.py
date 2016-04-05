@@ -97,10 +97,9 @@ class TwitterUser:
     def fetch_timeline(self, authUid, **kwargs):
         """Fetches list of tweets from user-timeline
             
-            :Returns: [list] list of dicts of tweet objects 
-            
+            :Returns: [list] list of dicts of tweet objects
             :param authUid: [long] user_id of twitter user whose timeline is to be fetched
-            :param twitter_handle: [Twython] a valid authenticated Twython object 
+            :param twitter_handle: [Twython] a valid authenticated Twython object
                 :default: create handle for authUid using credentials in Crowdfire Access Details
             :param user_id: [long] user_id of twitter user whose timeline is to be fetched
                 :default: authUid
@@ -210,8 +209,9 @@ class TwitterUser:
 
     def fetching_stint(self, authUid, timeline, save_to_es=True, **kwargs):
         """Mediator function to fetch max 200 tweets for given **kwargs
-            :Returns:   on success: [long] tweet_id of oldest tweet from tweet_list returned by fetch_timeline.
-                        on failure: [int] -1 when empty list/None is recieved.
+            :Returns:
+            * on success: [long] tweet_id of oldest tweet from tweet_list returned by fetch_timeline.
+            * on failure: [int] -1 when empty list/None is recieved.
 
             :param authUid: [long] user_id of twitter user whose timeline is to be fetched
             :param **kwargs: Same as *def fetch_timeline(self, authUid, **kwargs)*
@@ -237,7 +237,7 @@ class TwitterUser:
         '''Requests timeline of this user with options given in **kwargs
             :param authUid: authUid of user whose timeline is to be fetched
             :param save_to_es: Flag when set true, data fetched is saved in elasticsearch for future usage
-                :default: True
+            :default: True
             :param **kwargs: Same as *def fetch_timeline(self, authUid, **kwargs)*
             
             Raises ValueError if credentials for given authUid not available with Crowdfire
@@ -364,8 +364,7 @@ class TwitterUser:
                                  followers_count=5000, 
                                  tweets_count=3000):
         """Extracts and saves to ES the tweet objects from timelines of followers of a user
-            :param user_id: [long] user_id of target user
-                :default: self.user_id
+            :param authUid: [long] user_id of target user
             :param followers_count: [long] #followers
             :param tweets_count: [long] #tweets to fetch per follower
         """
