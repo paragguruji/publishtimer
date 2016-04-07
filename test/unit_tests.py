@@ -21,9 +21,7 @@ class ApiUnitTests(unittest.TestCase):
     def run_app(self):   
         """runs the app on server specified by environment variable *SERVER_NAME*
         """
-        host = os.environ['SERVER_NAME'].split(':')[0]
-        port = int(os.environ['SERVER_NAME'].split(':')[1])
-        api.app.run(host=host, port=port)
+        api.initiate()
 
 
     def validate_response(self, response):

@@ -104,14 +104,23 @@ def internal_error(error):
     traceback.print_exc(file=sys.stdout)
     return make_response(jsonify({'error': 'Internal Server Error'}), 500)
 
-if __name__=="__main__":
+def initiate():
     host = os.environ['SERVER_NAME'].split(':')[0];
     port = int(os.environ['SERVER_NAME'].split(':')[1])
-    print "*"*100    
+    print "*"*100
     print "\nStarting publishtimer server on ", os.environ['SERVER_NAME']
     print "Find server error logs at: publishtimer/logs/flask_server.log\n"
-    print "*"*100            
+    print "*"*100
+    if not os.path.isfile('logs/flask_server.log'):
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        with open('logs/flask_server.log', 'w') as fp:
+            fp.write("publishtimer server error logs... \n")
     handler = RotatingFileHandler('logs/flask_server.log', maxBytes=10000, backupCount=1)
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)
     app.run(host=host, port=port)
+    
+    
+if __name__=="__main__":
+    initiate()
