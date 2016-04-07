@@ -132,9 +132,11 @@ class CoreUnitTests(unittest.TestCase):
                               core.pd.DataFrame)
         self.assertFalse(result.get('data_frame', core.pd.DataFrame()).empty, 
                          msg="data_frame received is empty one")
+        print result.get('data_frame', core.pd.DataFrame()).index
+        print result.get('data_frame', core.pd.DataFrame()).columns
         self.assertEqual(7, 
                          len(result.get(
-                                 'data_frame', core.pd.DataFrame()).index))
+                                 'data_frame', core.pd.DataFrame()).columns))
         ind = core.pd.core.index.Index([u'day', 
                                         u'engagement', 
                                         u'favorite_count', 
@@ -142,8 +144,6 @@ class CoreUnitTests(unittest.TestCase):
                                         u'id', 
                                         u'minute', 
                                         u'retweet_count'], dtype='object')
-        print result['data_frame'].columns
-        print ind
         self.assertTrue(all(result['data_frame'].columns == ind))
         
         
