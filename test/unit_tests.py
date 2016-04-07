@@ -6,12 +6,13 @@ Created on Sat Apr  2 09:31:14 2016
 """
 
 from multiprocessing import Process
-from test.context import api, core
+from test.context import api, core, elasticsearch_util
 import requests
 import unittest
 import os
 import json
 import time
+from elasticsearch.exceptions import ConnectionError
 
 
 class ApiUnitTests(unittest.TestCase):
@@ -102,14 +103,17 @@ class CoreUnitTests(unittest.TestCase):
             
         """
         authUid = u'19900726' 
-        result = core.get_data_from_es(authUid)
-        self.assertIsInstance(result, dict)
-        self.assertIn('twitter_id', result)
-        self.assertIn('data', result)
-        self.assertIsInstance(result.get('data', None), list)
-        #self.assertEqual(len(result['data']), 2981)
-        self.assertIsInstance(result['data'][1], dict)
-        self.assertIn('created_at', result['data'][2])
+        try:
+            result = core.get_data_from_es(authUid)
+            self.assertIsInstance(result, dict)
+            self.assertIn('twitter_id', result)
+            self.assertIn('data', result)
+            self.assertIsInstance(result.get('data', None), list)
+            #self.assertEqual(len(result['data']), 2981)
+            self.assertIsInstance(result['data'][1], dict)
+            self.assertIn('created_at', result['data'][2])
+        except Exception as ex:
+            self.assertIsInstance(ex, ConnectionError)
     
     
     def test_prepare_data(self):
@@ -128,6 +132,11 @@ class CoreUnitTests(unittest.TestCase):
         self.assertIn('data_frame', result)
         self.assertIsInstance(result.get('data_frame', None), 
                               core.pd.DataFrame)
+        self.assertFalse(result.get('data_frame', core.pd.DataFrame()).empty, 
+                         msg="data_frame received is empty one")
+        self.assertEqual(7, 
+                         len(result.get(
+                                 'data_frame', core.pd.DataFrame()).index))
         ind = core.pd.core.index.Index([u'day', 
                                         u'engagement', 
                                         u'favorite_count', 
@@ -135,6 +144,8 @@ class CoreUnitTests(unittest.TestCase):
                                         u'id', 
                                         u'minute', 
                                         u'retweet_count'], dtype='object')
+        print result['data_frame'].columns
+        print ind
         self.assertTrue(all(result['data_frame'].columns == ind))
         
         
@@ -209,6 +220,24 @@ class CoreUnitTests(unittest.TestCase):
         self.assertIn('schedule_prepared', result)
         self.assertDictEqual(result.get('schedule_prepared', {}), schedule)
         
+
+class ElasticsearchUnitTests(unittest.TestCase):
+    """Test cases for module publishtimer.elasticsearch_util"""
+        
+    def test_es_connection(self):
+        """tests if ES server is alive and reachable
+                    
+        """
+        flag = False
+        msg = "Connection working, but not cluster"
+        try:
+            cli = elasticsearch_util.get_es_client()
+            flag = cli.ping()
+        except ConnectionError as ce:
+            msg = "Connection Error: " + str(ce.info)
+        self.assertTrue(flag, msg=msg)
+        
+
         
 if __name__ == '__main__':    
     unittest.main()

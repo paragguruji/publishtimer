@@ -8,8 +8,13 @@ Created on Mon Mar 30 12:10:03 2016
 from flask import Flask, abort, request, jsonify, make_response
 from publishtimer.core import work_once as worker_function
 import os
+import logging
+from logging.handlers import RotatingFileHandler
+import traceback
+import sys
 
 app = Flask(__name__)
+
 
 @app.route('/ping', methods=['GET'])
 def index():
@@ -79,7 +84,8 @@ def publish_schedule():
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 error to JSONify the response
-    """
+    """    
+    traceback.print_exc(file=sys.stdout)
     return make_response(jsonify({'error': 'Not found'}), 404)
 
 
@@ -87,6 +93,7 @@ def not_found(error):
 def bad_request(error):    
     """Handle 400 error to JSONify the response
     """
+    traceback.print_exc(file=sys.stdout)
     return make_response(jsonify({'error': 'Bad Request. Refer doc', 'message': str(error)}), 400)
 
 
@@ -94,9 +101,17 @@ def bad_request(error):
 def internal_error(error):    
     """Handle 500 error to JSONify the response
     """
+    traceback.print_exc(file=sys.stdout)
     return make_response(jsonify({'error': 'Internal Server Error'}), 500)
 
 if __name__=="__main__":
     host = os.environ['SERVER_NAME'].split(':')[0];
     port = int(os.environ['SERVER_NAME'].split(':')[1])
+    print "*"*100    
+    print "\nStarting publishtimer server on ", os.environ['SERVER_NAME']
+    print "Find server error logs at: publishtimer/logs/flask_server.log\n"
+    print "*"*100            
+    handler = RotatingFileHandler('logs/flask_server.log', maxBytes=10000, backupCount=1)
+    handler.setLevel(logging.INFO)
+    app.logger.addHandler(handler)
     app.run(host=host, port=port)

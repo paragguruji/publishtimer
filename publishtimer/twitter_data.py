@@ -281,8 +281,13 @@ class TwitterUser:
         tweet_dict.update({u'_id': tweet_dict.get(u'id', "00000"), 
                            u'_index': INDEX_NAME})        
         tweet = es.Tweet(**tweet_dict)
-        res = tweet.save()
-        self.tweet_per_follower_count+=1
+        res = None        
+        try:
+            res = tweet.save()
+            self.tweet_per_follower_count+=1
+        except:
+            print "Elasticsearch unreachable. Cannot save the tweet. tweet_id:", \
+                    tweet_dict['_id']
         if res:
             self.logger.info(" Success: tweet #" + \
                                 str(self.tweet_per_follower_count) + \

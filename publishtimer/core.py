@@ -15,6 +15,7 @@ import boto.sqs
 from dateutil import parser
 from publishtimer import twitter_data as td
 from publishtimer import elasticsearch_util as es
+from elasticsearch.exceptions import ConnectionError
 
 
 DAY_MAP = {0:'mon', 1:'tue', 2:'wed', 3:'thu', 4:'fri', 5:'sat', 6:'sun'}
@@ -127,7 +128,12 @@ def prepare_data(authUid,
         authUid = long(authUid[:-3])
     data_dict = {'twitter_id': authUid, 'data': []}
     if use_es:
-        data_dict = get_data_from_es(authUid)
+        try:
+            data_dict = get_data_from_es(authUid)
+        except ConnectionError as ce:
+            print "Elasticsearch unreachable at ", os.environ['ES_HOST']
+            print "ConnectionError: Info from ES:", ce.info
+            print "Will try hitting Twitter API if permitted...\n"
     if use_tw and not data_dict['data']:
         data_dict = get_data_on_fly(authUid, save=save_on_fly, **kwargs)
     if data_dict['data']:

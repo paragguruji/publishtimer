@@ -9,20 +9,27 @@ import os
 import datetime
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import DocType, Date, String
-from elasticsearch.connection.http_urllib3 import ConnectionTimeout
+from elasticsearch.connection.http_urllib3 import   ConnectionTimeout
+from elasticsearch.exceptions import ConnectionError
 
 
 CLIENT  = connections.create_connection(hosts=[os.environ['ES_HOST']], 
                                         timeout=int(os.environ['ES_TIMEOUT']))
 
-def get_es_client(enforce_new=False):
+def get_es_client(enforce_new=False, retry=True):
     """Returns the singleton Elasticsearch-client object connected to ES server specified by environment variable ES_HOST with default timeout specified by environment variable ES_TIMEOUT
     """
     global CLIENT
     if enforce_new or not CLIENT:
-        CLIENT = connections.create_connection(hosts=[os.environ['ES_HOST']], 
-                                               timeout=os.environ['ES_TIMEOUT'])
-    return CLIENT
+        CLIENT = \
+        connections.create_connection(hosts=[os.environ['ES_HOST']], 
+                                      timeout=os.environ['ES_TIMEOUT'])
+    if CLIENT.ping():
+        return CLIENT
+    elif retry:
+        return get_es_client(enforce_new=True, retry=False)
+    else:
+        return CLIENT    
     
 
 def get_tweet_index():
