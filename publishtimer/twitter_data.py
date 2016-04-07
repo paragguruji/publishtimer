@@ -22,6 +22,7 @@ RETRY_LIMIT = 3
 
 def get_credentials(authUid):
     """Returns access_token and access_token_secret for given authUid in JSON format by invoking Crowdfire's internal access_details API
+        Raises ValueError if credentials for given authUid not available with Crowdfire
     """
     if not isinstance(authUid, str):
         authUid = str(authUid)
@@ -32,8 +33,12 @@ def get_credentials(authUid):
                                'service': os.environ.get('SERVICE', ''), 
                                'authUid': authUid})
     json_response = response.json()
-    d = {'oauth_token': helpers.decrypt(json_response['access_token']),
-         'oauth_token_secret': helpers.decrypt(json_response['access_secret']),
+    if json_response.get('code', 0) == 604:
+        raise ValueError("No credentials retrieved for authUid " + \
+                            str(authUid) + \
+                            " from Crowdfire's internal access_details API")
+    d = {'oauth_token': helpers.decrypt(json_response.get('access_token', None)),
+         'oauth_token_secret': helpers.decrypt(json_response.get('access_secret', None)),
          'app_key': os.environ.get('TWITTER_APP_KEY', ''),
          'app_secret': os.environ.get('TWITTER_APP_SECRET', '')}
     return d
@@ -41,6 +46,7 @@ def get_credentials(authUid):
     
 def make_twython(authUid):
     """Makes a twython object with given authUid as authenticating user
+        Raises ValueError if credentials for given authUid not available with Crowdfire
     """
     return Twython(**get_credentials(authUid))
 
@@ -91,10 +97,9 @@ class TwitterUser:
     def fetch_timeline(self, authUid, **kwargs):
         """Fetches list of tweets from user-timeline
             
-            :Returns: [list] list of dicts of tweet objects 
-            
+            :Returns: [list] list of dicts of tweet objects
             :param authUid: [long] user_id of twitter user whose timeline is to be fetched
-            :param twitter_handle: [Twython] a valid authenticated Twython object 
+            :param twitter_handle: [Twython] a valid authenticated Twython object
                 :default: create handle for authUid using credentials in Crowdfire Access Details
             :param user_id: [long] user_id of twitter user whose timeline is to be fetched
                 :default: authUid
@@ -111,7 +116,9 @@ class TwitterUser:
             :param max_id: [long] Twitter API max_id option. has priority over since_id
                 :default: None
         """
-        twitter_handle  = kwargs.get('twitter_handle', make_twython(authUid))
+        twitter_handle  = kwargs.get('twitter_handle', None)
+        if not twitter_handle:
+            twitter_handle = make_twython(authUid)
         user_id         = kwargs.get('user_id', authUid)
         count           = kwargs.get('count', 200)
         trim_user       = kwargs.get('trim_user', True)
@@ -202,8 +209,9 @@ class TwitterUser:
 
     def fetching_stint(self, authUid, timeline, save_to_es=True, **kwargs):
         """Mediator function to fetch max 200 tweets for given **kwargs
-            :Returns:   on success: [long] tweet_id of oldest tweet from tweet_list returned by fetch_timeline.
-                        on failure: [int] -1 when empty list/None is recieved.
+            :Returns:
+            * on success: [long] tweet_id of oldest tweet from tweet_list returned by fetch_timeline.
+            * on failure: [int] -1 when empty list/None is recieved.
 
             :param authUid: [long] user_id of twitter user whose timeline is to be fetched
             :param **kwargs: Same as *def fetch_timeline(self, authUid, **kwargs)*
@@ -227,7 +235,12 @@ class TwitterUser:
 
     def request_timeline(self, authUid, save_to_es=True, **kwargs):
         '''Requests timeline of this user with options given in **kwargs
+            :param authUid: authUid of user whose timeline is to be fetched
+            :param save_to_es: Flag when set true, data fetched is saved in elasticsearch for future usage
+            :default: True
             :param **kwargs: Same as *def fetch_timeline(self, authUid, **kwargs)*
+            
+            Raises ValueError if credentials for given authUid not available with Crowdfire
         '''
         kwargs['twitter_handle'] = \
             kwargs.get('twitter_handle', make_twython(authUid))
@@ -243,9 +256,9 @@ class TwitterUser:
                                          save_to_es, \
                                          **kwargs)
             if max_id == kwargs.get('max_id', 1):
-                return max_id
+                return timeline
             elif max_id == -1:
-                return kwargs['max_id']
+                return timeline
             else:
                 kwargs['max_id'] = max_id
                 if count > 200:                
@@ -268,8 +281,13 @@ class TwitterUser:
         tweet_dict.update({u'_id': tweet_dict.get(u'id', "00000"), 
                            u'_index': INDEX_NAME})        
         tweet = es.Tweet(**tweet_dict)
-        res = tweet.save()
-        self.tweet_per_follower_count+=1
+        res = None        
+        try:
+            res = tweet.save()
+            self.tweet_per_follower_count+=1
+        except:
+            print "Elasticsearch unreachable. Cannot save the tweet. tweet_id:", \
+                    tweet_dict['_id']
         if res:
             self.logger.info(" Success: tweet #" + \
                                 str(self.tweet_per_follower_count) + \
@@ -351,8 +369,7 @@ class TwitterUser:
                                  followers_count=5000, 
                                  tweets_count=3000):
         """Extracts and saves to ES the tweet objects from timelines of followers of a user
-            :param user_id: [long] user_id of target user
-                :default: self.user_id
+            :param authUid: [long] user_id of target user
             :param followers_count: [long] #followers
             :param tweets_count: [long] #tweets to fetch per follower
         """

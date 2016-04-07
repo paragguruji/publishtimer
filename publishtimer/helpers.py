@@ -11,7 +11,7 @@ from Crypto.Cipher import AES
 from Crypto.Hash import MD5
 
 
-CONF_PATH = 'publishtimer/conf/local.env'
+CONF_PATH = 'conf/local.env'
 BLOCK_SIZE = 16
 
 
@@ -20,18 +20,25 @@ def setup_env(conf_path=''):
     """
     if not conf_path:
         conf_path = CONF_PATH
-    for line in open(conf_path):
+    try:
+        environfile = open(conf_path)
+    except:
+        return False
+    for line in environfile:
         line = line.strip()
         if line.startswith('#') or not line:
             continue
         key_val = line.split('=')
         if len(key_val) == 2:    
             os.environ[key_val[0].strip()] = key_val[1].strip()
+    return True
 
 
 def decrypt(base64binary_input, raw_key=None):
     """Decrypts the data received from Crowdfire access details API
     """
+    if not base64binary_input:
+        return None
     if not raw_key:
         raw_key = os.environ.get('ENCRYPTION_KEY', None)
     ciphertext = buffer(bytearray(map(ord, b64decode(base64binary_input))))
@@ -67,3 +74,6 @@ def purge_key_deep(a_dict, key):
             a_dict[k] = purge_key_deep(a_dict[k], key)
     return a_dict
         
+
+if __name__=="__main__":
+    setup_env()
