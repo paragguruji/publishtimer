@@ -132,8 +132,6 @@ class CoreUnitTests(unittest.TestCase):
                               core.pd.DataFrame)
         self.assertFalse(result.get('data_frame', core.pd.DataFrame()).empty, 
                          msg="data_frame received is empty one")
-        print result.get('data_frame', core.pd.DataFrame()).index
-        print result.get('data_frame', core.pd.DataFrame()).columns
         self.assertEqual(7, 
                          len(result.get(
                                  'data_frame', core.pd.DataFrame()).columns))

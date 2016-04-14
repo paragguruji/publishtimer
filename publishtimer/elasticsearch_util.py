@@ -10,7 +10,6 @@ import datetime
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import DocType, Date, String
 from elasticsearch.connection.http_urllib3 import   ConnectionTimeout
-from elasticsearch.exceptions import ConnectionError
 
 
 CLIENT  = connections.create_connection(hosts=[os.environ['ES_HOST']], 
