@@ -138,19 +138,16 @@ def unhandled_error(error):
     """Handle all unhandled error to JSONify the response
     """
     traceback.print_exc(file=sys.stdout)
-    try:    
-        code = error.code
-    except:
-        code = 0
-    try:
-        description = error.description
-    except:
-        description = 'No description found'
     return make_response(\
             jsonify({'error': str(error),
-                     'description': description,
+                     'description': getattr(error, 
+                                            'description', 
+                                            'No description found'),
                      'message': traceback.format_exc()}), 
-                    code)
+                    getattr(error, 'code', 0))
+
+for error in [i for i in range(400, 600) if i not in [400, 404, 500, 512]]:
+    app.error_handler_spec[None][error] = unhandled_error
 
 
 def initiate():
@@ -168,8 +165,6 @@ def initiate():
     handler = RotatingFileHandler('logs/flask_server.log', maxBytes=10000, backupCount=1)
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)
-    for error in [i for i in range(400, 600) if i not in [400, 404, 500, 512]]:
-        app.error_handler_spec[None][error] = unhandled_error
     app.run(host=host, port=port)
     
     
