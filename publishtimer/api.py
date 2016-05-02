@@ -146,11 +146,10 @@ def unhandled_error(error):
                      'message': traceback.format_exc()}), 
                     getattr(error, 'code', 0))
 
-for error in [i for i in range(400, 600) if i not in [400, 404, 500, 512]]:
-    app.error_handler_spec[None][error] = unhandled_error
-
 
 def initiate():
+    '''Initiates the required parameters for the server and starts it
+    '''
     host = os.environ['SERVER_NAME'].split(':')[0];
     port = int(os.environ['SERVER_NAME'].split(':')[1])
     print "*"*100
@@ -164,6 +163,11 @@ def initiate():
             fp.write("publishtimer server error logs... \n")
     handler = RotatingFileHandler('logs/flask_server.log', maxBytes=10000, backupCount=1)
     handler.setLevel(logging.INFO)
+    '''Following for loop is the safety net for all unhandled HTTP error codes. 
+        Ref.: http://stackoverflow.com/a/27760417
+    '''
+    for error in [i for i in range(400, 600) if i not in [400, 404, 500, 512]]:
+        app.error_handler_spec[None][error] = unhandled_error
     app.logger.addHandler(handler)
     app.run(host=host, port=port)
     
