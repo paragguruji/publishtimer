@@ -247,13 +247,8 @@ def write_schedule(schedule):
     complete_schedule = fill_incomplete_schedule(schedule)
     request_url = os.environ.get('SAVE_SCHEDULE_URL', '') + \
                     complete_schedule['authUid']
-    response = requests.put(url= request_url, 
-                              json=complete_schedule)
-    response = response.json()
-    response['url_requested'] = request_url
-    final_response = {"response_from_save_schedule_api": response,
-                      "schedule_prepared": complete_schedule}
-    return final_response
+    response = requests.put(url= request_url, json=complete_schedule)
+    return complete_schedule, response
 
 
 def work_once_with_sqs():
