@@ -40,7 +40,8 @@ ES_TIMEOUT: Elasticsearch request timeout in seconds
 SERVER_NAME: server on which service is to be made available. Format: <HOST>:<PORT> e.g.: 0.0.0.0:5001
 
 
-**Note**: To set environment from a text file: 
+**Note**: 
+    To set environment from a text file:
     1. Create a directory `conf` in the base directory of this repository.
     2. Create a file with name `local.env` inside this `conf` directory
     3. Specify desired values of environment variables in `conf/local.env` with one environment variable per line in following format:
