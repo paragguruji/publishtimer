@@ -16,10 +16,13 @@ from werkzeug.exceptions import Aborter
 from publishtimer.custom_exceptions import WriteScheduleFailedError
 
 
+<<<<<<< Updated upstream
 ERROR_MAPPINGS = {512: WriteScheduleFailedError}
 
 abort = Aborter(extra=ERROR_MAPPINGS)
 
+=======
+>>>>>>> Stashed changes
 application = app = Flask(__name__)
 
 
@@ -34,8 +37,13 @@ def index():
 def publish_schedule():
     """API to trigger the publishtimer for desired authUid
 
+<<<<<<< Updated upstream
     Calls the worker_function imported from core module with received params as
     args and returns its response
+=======
+    Calls the worker_function imported from core module with received params
+    as args and returns its response
+>>>>>>> Stashed changes
 
     :Returns: JSON Response containing:
             1. JSONified response recieved from save_schedule API
@@ -46,7 +54,11 @@ def publish_schedule():
 
     :Request_URL: <base_url>/api/v1.0/publishschedule
 
+<<<<<<< Updated upstream
     :Method: POST
+=======
+    :Method: PUT
+>>>>>>> Stashed changes
 
     :Request_type: JSON
 
@@ -82,6 +94,7 @@ def publish_schedule():
     if not request.json:
         abort(400, description="aborting because empty request.json")
     if 'authUid' not in request.json:
+<<<<<<< Updated upstream
         abort(400, description="aborting because authUid not in request")
     if type(request.json['authUid']) not in [unicode, long, int, str]:
         abort(400,
@@ -109,24 +122,53 @@ def bad_request(error):
     traceback.print_exc(file=sys.stdout)
     return make_response(jsonify({'error': str(error),
                                   'message': error.description}), error.code)
+=======
+        print "aborting because authUid not in request"
+        abort(400)
+    if type(request.json['authUid']) not in [unicode, long, int, str]:
+        print "aborting because authUid neither of unicode, long, int, str"
+        abort(400)
+    if 'use_es' in request.json and type(request.json['use_es']) is not bool:
+        print "aborting because use_es is not bool"
+        abort(400)
+    if 'use_tw' in request.json and type(request.json['use_tw']) is not bool:
+        print "aborting because use_tw is not bool"
+        abort(400)
+    if 'save_on_fly' in request.json and \
+            type(request.json['save_on_fly']) is not bool:
+        print "aborting because save_on_fly is not bool"
+        abort(400)
+    results = worker_function(**request.json)
+    return make_response(jsonify(results))
+>>>>>>> Stashed changes
 
 
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 error to JSONify the response
     """
+<<<<<<< Updated upstream
     print error.code, ': ', str(error), ' : ', error.description
+=======
+>>>>>>> Stashed changes
     traceback.print_exc(file=sys.stdout)
     return make_response(jsonify({'error': str(error),
                                   'message': error.description}), error.code)
 
 
+<<<<<<< Updated upstream
 @app.errorhandler(500)
 def internal_error(error):
     """Handle 500 error to JSONify the response
+=======
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 error to JSONify the response
+>>>>>>> Stashed changes
     """
     print 500, ': ', type(error).__name__, ' : ', str(error)
     traceback.print_exc(file=sys.stdout)
+<<<<<<< Updated upstream
     return make_response(
             jsonify({'error': '500: InternalServerError: ' +
                               str(type(error).__name__),
@@ -149,6 +191,15 @@ def write_api_error(error):
 
 def unhandled_error(error):
     """Handle all unhandled error to JSONify the response
+=======
+    return make_response(jsonify({'error': 'Bad Request. Refer doc',
+                                  'message': str(error)}), 400)
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 error to JSONify the response
+>>>>>>> Stashed changes
     """
     traceback.print_exc(file=sys.stdout)
     return make_response(
@@ -161,9 +212,13 @@ def unhandled_error(error):
 
 
 
+
 def initiate():
+<<<<<<< Updated upstream
     '''Initiates the required parameters for the server and starts it
     '''
+=======
+>>>>>>> Stashed changes
     host = os.environ['SERVER_NAME'].split(':')[0]
     port = int(os.environ['SERVER_NAME'].split(':')[1])
     print "*"*100
@@ -179,11 +234,14 @@ def initiate():
                                   maxBytes=10000,
                                   backupCount=1)
     handler.setLevel(logging.INFO)
+<<<<<<< Updated upstream
     '''Following for loop is the safety net for all unhandled HTTP error codes.
         Ref.: http://stackoverflow.com/a/27760417
     '''
     for error in [i for i in range(400, 600) if i not in [400, 404, 500, 512]]:
         app.error_handler_spec[None][error] = unhandled_error
+=======
+>>>>>>> Stashed changes
     application.logger.addHandler(handler)
     application.run(host=host, port=port)
 
