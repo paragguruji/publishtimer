@@ -19,13 +19,13 @@ Steps to run the project:
 Environment variables required:
 ===============================
 
-ACCESS_DETAILS_URL: Crowdfire API's URL for getting access token
+CROWDFIRE_INTERNAL_API_BASE_URL: Crowdfire API's base URL for getting user's access credentials
 
 SAVE_SCHEDULE_URL: Crowdfire API's URL for writing genereated schedule
 
-SERVICE: Crowdfire API's service name
+SERVICE: Crowdfire internal API's service name
 
-API_KEY: Crowdfire API's access key
+CROWDFIRE_INTERNAL_API_KEY: Crowdfire API's access key
 
 ENCRYPTION_KEY: Crowdfire API's encryption key
 
@@ -33,11 +33,13 @@ TWITTER_APP_KEY: Crowdfire App's Twitter consumer key
 
 TWITTER_APP_SECRET: Crowdfire App's Twitter consumer secret
 
-ES_HOST: Elasticsearch Host <IP>:<PORT>
+ES_HOSTS: Comma-separated list of Elasticsearch hosts 
+          **Format:** <IP>:<PORT>, <IP>:<PORT>, ...
 
 ES_TIMEOUT: Elasticsearch request timeout in seconds
 
-SERVER_NAME: server on which service is to be made available. Format: <HOST>:<PORT> e.g.: 0.0.0.0:5001
+SERVER_NAME: server on which service is to be made available (e.g.: 0.0.0.0:5001)
+             **Format:** <HOST>:<PORT>
 
 
 **Note**: 
