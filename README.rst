@@ -34,12 +34,12 @@ TWITTER_APP_KEY: Crowdfire App's Twitter consumer key
 TWITTER_APP_SECRET: Crowdfire App's Twitter consumer secret
 
 ES_HOSTS: Comma-separated list of Elasticsearch hosts 
-          **Format:** <IP>:<PORT>, <IP>:<PORT>, ...
+          Format: <IP>:<PORT>, <IP>:<PORT>, ...
 
 ES_TIMEOUT: Elasticsearch request timeout in seconds
 
 SERVER_NAME: server on which service is to be made available (e.g.: 0.0.0.0:5001)
-             **Format:** <HOST>:<PORT>
+             Format: <HOST>:<PORT>
 
 
 **Note**: 
