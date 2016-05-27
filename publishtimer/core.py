@@ -39,14 +39,15 @@ def get_data_on_fly(authUid, save=True, **kwargs):
     ret = {'twitter_id': authUid, 'data': []}
     tw = td.TwitterUser()
     tweets = tw.request_timeline(authUid, save_to_es=save, **kwargs)
-    ret['data'] = [{'created_at': str(datetime.datetime.strptime(
-                                    t.get('created_at', ''),
-                                    "%a %b %d %H:%M:%S +0000 %Y"))
-                    if isinstance(t.get('created_at', ''), str)
-                    else str(t.get('created_at', None)),
-                    'favorite_count': t['favorite_count'],
-                    'retweet_count': t['retweet_count'],
-                    'id': t['id']} for t in tweets]
+    for tweet in tweets:
+        ret['data'].append({'created_at': str(datetime.datetime.strptime(
+                                                tweet.get('created_at', ''),
+                                                "%a %b %d %H:%M:%S +0000 %Y"))
+                            if isinstance(tweet.get('created_at', ''), str)
+                            else str(tweet.get('created_at', None)),
+                            'favorite_count': tweet['favorite_count'],
+                            'retweet_count': tweet['retweet_count'],
+                            'id': tweet['id']})
     return ret
 
 
@@ -83,11 +84,10 @@ def get_data_from_es(authUid):
         res = es.get_es_client().search(index='_all',
                                         doc_type='tweet',
                                         body=search_body)
-        for i in range(len(res['hits']['hits'])):
-            for k in res['hits']['hits'][i]['fields'].keys():
-                res['hits']['hits'][i]['fields'][k] \
-                    = res['hits']['hits'][i]['fields'][k][0]
-            data.append(res['hits']['hits'][i]['fields'])
+        for hit in res['hits']['hits']:
+            for key in hit['fields']:
+                hit['fields'][key] = hit['fields'][key][0]
+            data.append(hit['fields'])
         return {'twitter_id': authUid, 'data': data}
 
 
@@ -123,7 +123,7 @@ def prepare_data(authUid,
         try:
             data_dict = get_data_from_es(authUid)
         except ConnectionError as ce:
-            print "Elasticsearch unreachable at ", os.environ['ES_HOST']
+            print "Elasticsearch unreachable at ", os.environ['ES_HOSTS']
             print "ConnectionError: Info from ES:", ce.info
             print "Will try hitting Twitter API if permitted...\n"
     if use_tw and not data_dict['data']:

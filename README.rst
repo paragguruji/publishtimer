@@ -38,7 +38,7 @@ ES_HOSTS: Comma-separated list of Elasticsearch hosts
 
 ES_TIMEOUT: Elasticsearch request timeout in seconds
 
-SERVER_NAME: server on which service is to be made available (e.g.: 0.0.0.0:5001)
+SERVER_NAME: Server on which service is to be made available (e.g.: 0.0.0.0:5001)
              Format: <HOST>:<PORT>
 
 
