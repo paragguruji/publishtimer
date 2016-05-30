@@ -37,14 +37,22 @@ def get_data_on_fly(authUid, save=True, **kwargs):
         Raises ValueError if credentials for given authUid not available.
     """
     ret = {'twitter_id': authUid, 'data': []}
+    """Create an instance of TwitterUser class from twitter_data module and
+        get the list of tweets for given user
+    """
     tw = td.TwitterUser()
     tweets = tw.request_timeline(authUid, save_to_es=save, **kwargs)
     for tweet in tweets:
-        ret['data'].append({'created_at': str(datetime.datetime.strptime(
-                                                tweet.get('created_at', ''),
-                                                "%a %b %d %H:%M:%S +0000 %Y"))
-                            if isinstance(tweet.get('created_at', ''), str)
-                            else str(tweet.get('created_at', None)),
+        """Bring the timestamp in desired format
+        """
+        created_at = tweet.get('created_at', '')
+        if isinstance(created_at, str):
+            created_at = str(datetime.datetime.strptime(
+                                created_at,
+                                "%a %b %d %H:%M:%S +0000 %Y"))
+        else:
+            created_at = str(created_at)
+        ret['data'].append({'created_at': created_at,
                             'favorite_count': tweet['favorite_count'],
                             'retweet_count': tweet['retweet_count'],
                             'id': tweet['id']})
@@ -66,6 +74,8 @@ def get_data_from_es(authUid):
                                      'favorite_count'],
                           "size": <SIZE>}
     """
+    """1. Run elasticsearch query to get tweets of given authUid with size 1:
+    """
     search_body = {"filter": {"term": {"user.id": authUid}},
                    "fields": ['id',
                               'created_at',
@@ -75,15 +85,21 @@ def get_data_from_es(authUid):
     res = es.get_es_client().search(index='_all',
                                     doc_type='tweet',
                                     body=search_body)
+    """2. Get the count from its result to COUNT
+    """
     cnt = res['hits']['total']
     if not cnt:
         return {'twitter_id': authUid, 'data': []}
     else:
+        """3. Run same query with size = COUNT
+        """
         data = []
         search_body["size"] = cnt
         res = es.get_es_client().search(index='_all',
                                         doc_type='tweet',
                                         body=search_body)
+        """4. Return data from hits field of the resultset with sanity_check
+        """
         for hit in res['hits']['hits']:
             for key in hit['fields']:
                 hit['fields'][key] = hit['fields'][key][0]
@@ -114,11 +130,17 @@ def prepare_data(authUid,
         6. Create pandas dataframe from data_dict and return in response
 
     """
+    """1. Check and correct if required the format of given authUid
+    """
     if isinstance(authUid, str):
         authUid = authUid.decode('utf-8')
     if isinstance(authUid, unicode) and authUid.endswith(u'-tw'):
         authUid = long(authUid[:-3])
+    """2. data_dict = empty response"""
     data_dict = {'twitter_id': authUid, 'data': []}
+    """3. If use_es True:
+            3.1. data_dict = get_data_from_es(authUid)
+    """
     if use_es:
         try:
             data_dict = get_data_from_es(authUid)
@@ -126,10 +148,23 @@ def prepare_data(authUid,
             print "Elasticsearch unreachable at ", os.environ['ES_HOSTS']
             print "ConnectionError: Info from ES:", ce.info
             print "Will try hitting Twitter API if permitted...\n"
+    """
+    4. If data_dict empty and use_tw True:
+            4.1. data_dict = get_data_on_fly(authUid,
+                                             save=save_on_fly,
+                                             **kwargs)
+    """
     if use_tw and not data_dict['data']:
         data_dict = get_data_on_fly(authUid, save=save_on_fly, **kwargs)
+    """5. If data_dict not empty:
+    """
     if data_dict['data']:
+        """5.1. For each data_point:
+        """
         for i in range(len(data_dict['data'])):
+            """5.1.1. Parse created_at field from data_dict into day, hour and
+                      minute and add to data_point entry in the data_dict
+            """
             d = parser.parse(data_dict['data'][i].pop('created_at'))
             data_dict['data'][i]['day'] = d.weekday()
             data_dict['data'][i]['hour'] = d.hour
@@ -137,6 +172,8 @@ def prepare_data(authUid,
             data_dict['data'][i]['engagement'] \
                 = data_dict['data'][i].get('retweet_count', 0) \
                 + data_dict['data'][i].get('favorite_count', 0) * 100
+    """6. Create pandas dataframe from data_dict and return in response
+    """
     return {'twitter_id': data_dict['twitter_id'],
             'data_frame': pd.DataFrame(data_dict['data'])}
 
@@ -197,9 +234,12 @@ def compute_times(data_dict):
             """Append daily schedule to response
             """
             response_dict["day"] = DAY_MAP[dt[d.index[0]].day.astype(int)]
-            response_dict["times"] = ['{}:{}'.format(dt[i].hour.astype(int),
-                                                     dt[i].minute.astype(int))
-                                      for i in d.index]
+            response_dict["times"] = list(
+                                        set(
+                                            ['{}:{}'.format(
+                                                dt[i].hour.astype(int),
+                                                dt[i].minute.astype(int))
+                                                for i in d.index]))
             out_dict['completeSchedule'].append(response_dict)
     return out_dict
 
@@ -245,10 +285,21 @@ def write_schedule(schedule):
             save_schedule_api
 
     """
+    """1. Fill in given schedule to complete it - fill_incomplete_schedule
+          (schedule)
+    """
     complete_schedule = fill_incomplete_schedule(schedule)
+    """2. Create target URL using environment variable SAVE_SCHEDULE_URL and
+          authUid
+    """
     request_url = os.environ.get('SAVE_SCHEDULE_URL', '') + \
         complete_schedule['authUid']
+    """3. Call save_schedule_api with PUT method
+    """
     response = requests.put(url=request_url, json=complete_schedule)
+    """4. respond with union of completed_schedule and response from
+          save_schedule_api
+    """
     return complete_schedule, response
 
 
