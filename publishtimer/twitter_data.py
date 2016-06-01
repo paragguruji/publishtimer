@@ -172,8 +172,8 @@ class TwitterUser:
                              str(self.follower_ids_request_count) +
                              "\n\ttotal_follower_ids_reqs: " +
                              str(self.follower_ids_request_record))
-            time.sleep(sleep_time)
-            return self.fetch_timeline(authUid, **kwargs)
+            # time.sleep(sleep_time)
+            # return self.fetch_timeline(authUid, **kwargs)
         self.timeline_request_count += 1
         self.timeline_request_record += 1
         status_word = 'SUCCESS'
@@ -223,7 +223,7 @@ class TwitterUser:
                              str(self.follower_ids_request_count) +
                              "\n\ttotal_follower_ids_reqs: " +
                              str(self.follower_ids_request_record))
-            time.sleep(sleep_time)
+            # time.sleep(sleep_time)
             tweet_list = []
             status_word = 'TwythonRateLimitError'
         if tweet_list:
@@ -282,6 +282,7 @@ class TwitterUser:
             kwargs.get('twitter_handle', make_twython(authUid))
         count = kwargs.get('count', 200)
         timeline = []
+        begin_time = datetime.datetime.now()
         while count:
             if count > 200:
                 kwargs['count'] = 200
@@ -301,6 +302,12 @@ class TwitterUser:
                     count -= 200
                 else:
                     count = 0
+        finish_time = datetime.datetime.now()
+        self.logger.info("Gathered timeline for authUid: " +
+                         str(authUid) + ":" + str(len(timeline)) +
+                         " tweets in " +
+                         str((finish_time - begin_time).total_seconds()) +
+                         " seconds")
         return timeline
 
     def save_tweet(self, tweet_dict):
@@ -377,7 +384,7 @@ class TwitterUser:
                                  str(self.follower_ids_request_count) +
                                  "\n\ttotal_follower_ids_reqs: " +
                                  str(self.follower_ids_request_record))
-                time.sleep(sleep_time)
+                # time.sleep(sleep_time)
                 continue
             self.follower_ids_request_count += 1
             self.follower_ids_request_record += 1
