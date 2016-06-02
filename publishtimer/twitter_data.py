@@ -172,8 +172,6 @@ class TwitterUser:
                              str(self.follower_ids_request_count) +
                              "\n\ttotal_follower_ids_reqs: " +
                              str(self.follower_ids_request_record))
-            # time.sleep(sleep_time)
-            # return self.fetch_timeline(authUid, **kwargs)
         self.timeline_request_count += 1
         self.timeline_request_record += 1
         status_word = 'SUCCESS'
@@ -384,7 +382,6 @@ class TwitterUser:
                                  str(self.follower_ids_request_count) +
                                  "\n\ttotal_follower_ids_reqs: " +
                                  str(self.follower_ids_request_record))
-                # time.sleep(sleep_time)
                 continue
             self.follower_ids_request_count += 1
             self.follower_ids_request_record += 1
